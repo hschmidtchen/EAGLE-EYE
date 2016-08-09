@@ -9,8 +9,8 @@ import caffe
 
 caffe.set_mode_cpu()
 
-model_def = caffe_root + 'caffe_model/deploy.prototxt'
-model_weights = caffe_root + 'caffe_model/snapshot_iter_21120.caffemodel'
+model_def = 'caffe_model/deploy.prototxt'
+model_weights = 'caffe_model/snapshot_iter_21120.caffemodel'
 
 net = caffe.Net(model_def,      # defines the structure of the model
                 model_weights,  # contains the trained weights
