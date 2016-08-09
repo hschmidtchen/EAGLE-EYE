@@ -257,6 +257,10 @@ if __name__ == '__main__':
     classify(args['caffemodel'], args['deploy_file'], args['image_file'],
             args['mean'], args['labels'], args['batch_size'], not args['nogpu'])
 
+    #classify(['caffe_model/snapshot_iter_21120.caffemodel'], ['caffe_model/deploy.prototxt'], ['digit_images/mnist_complete_zero.png'],
+    #        args['mean'], args['labels'], args['batch_size'], not args['nogpu'])
+
+
     print 'Script took %f seconds.' % (time.time() - script_start_time,)
 
 
