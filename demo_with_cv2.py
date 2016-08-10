@@ -188,7 +188,7 @@ class automaticControlThread (threading.Thread):
                         print 'tracking'
                     # Controler
                 
-        print "Exiting " + self.name
+        print "Exiting" + self.name
         
     def getAndSearchImage(self):
          try:
@@ -217,8 +217,80 @@ class automaticControlThread (threading.Thread):
             pass
         
     def controlStep(self,p,d):
-         x,y = p
-         hx,hy = d
+        
+        x = p[0]      
+        y = p[1]
+        
+        hx = d[0]
+        hy = d[1]
+
+        K_px=2.0
+        K_dx=0.0
+        K_ix=1.0        
+        
+        #initialization
+        tx_prev = 0
+        uix_prev = 0
+        ex_prev = 0
+            
+        #control x
+        #error for x between the desired and actual output
+        ex = 0 - x
+        tx = time.time() - tx_prev
+        
+        #Integration input
+        uix = uix_prev + 1/K_ix * tx*ex
+        #Derivation input
+        udx = 1/K_d * (ex-ex_prev)/tx
+        
+        #adjust previous values
+        ex_prev = ex
+        tx_prev += tx
+        uix_prev = uix
+        
+        #calculate input for the system
+        ux = K_p * (ex + uix + udx)
+        
+        if ux < -ux_threshold :
+            drone.speed = -MAX_SPEED_ROT * ux
+            drone.turn_right()
+        elif ux > +ux_threshold :
+            drone.speed = MAX_SPEED_ROT * ux
+            drone.turn_left()
+        
+        K_py=2.0
+        K_dy=0.0
+        K_iy=1.0        
+        
+        #initialization
+        ty_prev = 0
+        uiy_prev = 0
+        ey_prev = 0        
+        
+        #control y        
+        #error for y between the desired and actual output
+        ey = 0 - y
+        ty = time.time() - ty_prev
+        
+        #Integration input
+        uiy = uiy_prev + 1/K_iy * ty*ey
+        #Derivation input
+        udy = 1/K_dy * (ey-ey_prev)/ty
+        
+        #adjust previous values
+        ey_prev = ey
+        ty_prev += ty
+        uiy_prev = uiy
+        
+        #calculate input for the system
+        uy = K_py * (ey + uiy + udy)
+        
+        if uy < -uy_threshold :
+            drone.speed = -MAX_SPEED_ROT * uy
+            drone.turn_up()
+        elif uy > +uy_threshold :
+            drone.speed = MAX_SPEED_ROT * uy
+            drone.turn_down()
          
 
 def main():
