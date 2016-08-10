@@ -62,14 +62,14 @@ def main():
             elif k == ord('d'):
                 drone.move_right()
             # up / down
-            elif k == 63232:
+            elif k == 2490368:
                 drone.move_up()
-            elif k == 63233:
+            elif k == 2621440:
                 drone.move_down()
             # turn left / turn right
-            elif k == 63234:
+            elif k == 2424832:
                 drone.turn_left()
-            elif k == 63235:
+            elif k == 2555904:
                 drone.turn_right()
             # speed
             elif k == ord('1'):
@@ -100,6 +100,7 @@ def main():
                     frame = pixelarray[:,:,::-1].copy()
                 #resize image
                     resized=cv2.resize(frame,(W,H))
+                    print 'got image'
                 #image conversion
                 
             # battery status
