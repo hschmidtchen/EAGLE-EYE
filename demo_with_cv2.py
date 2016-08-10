@@ -125,7 +125,9 @@ class manualControlThread (threading.Thread):
     		        drone.speed = 0.9
     		    elif k == ord('0'):
     		        drone.speed = 1.0      
-    
+              else:
+                  drone.hover()
+              
         print("Shutting down...")
         drone.halt()
         print("Ok.")        
@@ -152,7 +154,7 @@ class automaticControlThread (threading.Thread):
         
         print "Starting " + self.name
         
-        p[0] = -1        
+        p[0] = -W        
         
         while self.running:
             thread_lock.acquire()
@@ -215,6 +217,8 @@ class automaticControlThread (threading.Thread):
             pass
         
     def controlStep(self,p,d):
+         x,y = p
+         hx,hy = d
          
 
 def main():
