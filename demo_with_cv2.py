@@ -199,15 +199,23 @@ class automaticControlThread (threading.Thread):
             #resize image
                 resized=cv2.resize(frame,(W,H))
                 print 'got image'
-            #image conversion
-            
+            # aruco detection
+	    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+	    aruco_dict = aruco.Dictionary_get(aruco.DICT_6X6_250)
+	    parameters =  aruco.DetectorParameters_create()
+
+	    #lists of ids and the corners beloning to each id
+	    corners, ids, rejectedImgPoints = aruco.detectMarkers(gray, aruco_dict, parameters=parameters)
+            print(corners)
+	    gray = aruco.drawDetectedMarkers(gray, corners)
+
             # battery status
-                hud_color = (255, 0, 0) if drone.navdata.get('drone_state', dict()).get('emergency_mask', 1) else (10, 10, 255)
-                bat = drone.navdata.get(0, dict()).get('battery', 0)
+            hud_color = (255, 0, 0) if drone.navdata.get('drone_state', dict()).get('emergency_mask', 1) else (10, 10, 255)
+            bat = drone.navdata.get(0, dict()).get('battery', 0)
             # f = pygame.font.Font(None, 20)
             # hud = f.render('Battery: %i%%' % bat, True, hud_color) 
             # screen.blit(hud, (10, 10))
-            cv2.imshow('Drone',resized)            
+            cv2.imshow('Drone',gray)            
             x = 1
             y = 2
             hx = 3
