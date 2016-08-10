@@ -37,61 +37,76 @@ def main():
     drone = libardrone.ARDrone(True)
     drone.reset()
     running = True
+    manual_mode = True
     while running:
+	    # query pressed keys
             k = cv2.waitKey(33)
+	    # escape to stop program execution
             if k == 27: # 27=escape
                 running = False
                 drone.reset()
+	    # takeoff
             elif k == 13: # 13=enter
                 print("return")
                 drone.takeoff()
+	    # land
             elif k == 32: # 32=space
                 print("space")
                 drone.land()
             # emergency
             elif k == 8: # 8=backspace
                 drone.reset()
-            # forward / backward
-            elif k == ord('w'):
-                drone.move_forward()
-            elif k == ord('s'):
-                drone.move_backward()
-            # left / right
-            elif k == ord('a'):
-                drone.move_left()
-            elif k == ord('d'):
-                drone.move_right()
-            # up / down
-            elif k == 2490368:
-                drone.move_up()
-            elif k == 2621440:
-                drone.move_down()
-            # turn left / turn right
-            elif k == 2424832:
-                drone.turn_left()
-            elif k == 2555904:
-                drone.turn_right()
-            # speed
-            elif k == ord('1'):
-                drone.speed = 0.1
-            elif k == ord('2'):
-                drone.speed = 0.2
-            elif k == ord('3'):
-                drone.speed = 0.3
-            elif k == ord('4'):
-                drone.speed = 0.4
-            elif k == ord('5'):
-                drone.speed = 0.5
-            elif k == ord('6'):
-                drone.speed = 0.6
-            elif k == ord('7'):
-                drone.speed = 0.7
-            elif k == ord('8'):
-                drone.speed = 0.8
-            elif k == ord('9'):
-                drone.speed = 0.9
-            elif k == ord('0'):
-                drone.speed = 1.0
+	    # switch control mode
+	    elif k == ord('m'):
+		drone.hover()
+		manual_mode = !manual_mode
+	
+ 	    # switch between manual and autonomous control
+	    elif manual_mode
+		    # listen for additional key events for manual control
+		    # forward / backward
+		    if k == ord('w'):
+		        drone.move_forward()
+		    elif k == ord('s'):
+		        drone.move_backward()
+		    # left / right
+		    elif k == ord('a'):
+		        drone.move_left()
+		    elif k == ord('d'):
+		        drone.move_right()
+		    # up / down
+		    elif k == 2490368:
+		        drone.move_up()
+		    elif k == 2621440:
+		        drone.move_down()
+		    # turn left / turn right
+		    elif k == 2424832:
+		        drone.turn_left()
+		    elif k == 2555904:
+		        drone.turn_right()
+		    # speed
+		    elif k == ord('1'):
+		        drone.speed = 0.1
+		    elif k == ord('2'):
+		        drone.speed = 0.2
+		    elif k == ord('3'):
+		        drone.speed = 0.3
+		    elif k == ord('4'):
+		        drone.speed = 0.4
+		    elif k == ord('5'):
+		        drone.speed = 0.5
+		    elif k == ord('6'):
+		        drone.speed = 0.6
+		    elif k == ord('7'):
+		        drone.speed = 0.7
+		    elif k == ord('8'):
+		        drone.speed = 0.8
+		    elif k == ord('9'):
+		        drone.speed = 0.9
+		    elif k == ord('0'):
+		        drone.speed = 1.0
+		else
+		    #autonomous mode takes over
 
             try:
             # print pygame.image
