@@ -43,7 +43,15 @@ class manualControlThread (threading.Thread):
         self.threadID = threadID
         self.name = name
         self.running = True
+        
     def run(self):
+        
+        global drone
+        global exiting
+        global manual_mode
+        global thread_lock
+        global thread_lock2
+        
         print "Starting " + self.name
         
         while self.running:
@@ -129,8 +137,22 @@ class automaticControlThread (threading.Thread):
         self.threadID = threadID
         self.name = name
         self.running = True
+        self.status = "Start"
+        
+        
     def run(self):
+        
+        global drone
+        global thread_lock
+        global thread_lock2
+        global exiting
+        global manual_mode
+        global W
+        global H
+        
         print "Starting " + self.name
+        
+        p[0] = -1        
         
         while self.running:
             thread_lock.acquire()
@@ -139,38 +161,76 @@ class automaticControlThread (threading.Thread):
                 self.running = False
             else:
                 thread_lock.release()
-                try:
-                    # print pygame.image
-                    pixelarray = drone.get_image()
-                    if pixelarray != None:
-                        frame = pixelarray[:,:,::-1].copy()
-                    #resize image
-                        resized=cv2.resize(frame,(W,H))
-                        print 'got image'
-                    #image conversion
-                    
-                    # battery status
-                        hud_color = (255, 0, 0) if drone.navdata.get('drone_state', dict()).get('emergency_mask', 1) else (10, 10, 255)
-                        bat = drone.navdata.get(0, dict()).get('battery', 0)
-                    # f = pygame.font.Font(None, 20)
-                    # hud = f.render('Battery: %i%%' % bat, True, hud_color) 
-                    # screen.blit(hud, (10, 10))
                 
+                thread_lock2.acquire()
+                if not manual_mode:
                     # Tracking 
-
-                    thread_lock2.acquire()
-                    if not manual_mode:
-                        # Controler
+                    if self.status == "Start":
+                        # To do with image recognition
+                        print'start'
+                    elif self.status == "Searching":
+                        # To do turn and search marker
+                        p,d = self.getAndSearchImage()
+                        if p[0] >= -W/2:
+                            self.status = "Tracking"
+                        else:
+                            drone.turn_left()
+                        print 'Searching'
+                    elif self.status == "Tracking":
+                        # To do image recognition and controler calculation
+                        if p[0] >= -W/2:
+                            controlStep(p,d)
+                            p,d = self.getAndSearchImage()
+                        else:
+                            self.status = "Searching"
+                        print 'tracking'
+                    # Controler
                 
-                    cv2.imshow('Drone',resized)
-                  except:
-                    pass
         print "Exiting " + self.name
+        
+    def getAndSearchImage(self):
+         try:
+            # print pygame.image
+            pixelarray = drone.get_image()
+            if pixelarray != None:
+                frame = pixelarray[:,:,::-1].copy()
+            #resize image
+                resized=cv2.resize(frame,(W,H))
+                print 'got image'
+            #image conversion
+            
+            # battery status
+                hud_color = (255, 0, 0) if drone.navdata.get('drone_state', dict()).get('emergency_mask', 1) else (10, 10, 255)
+                bat = drone.navdata.get(0, dict()).get('battery', 0)
+            # f = pygame.font.Font(None, 20)
+            # hud = f.render('Battery: %i%%' % bat, True, hud_color) 
+            # screen.blit(hud, (10, 10))
+            cv2.imshow('Drone',resized)            
+            x = 1
+            y = 2
+            hx = 3
+            hy = 4
+            return (x,y), (hx,hy)
+         except:
+            pass
+        
+    def controlStep(self,p,d):
+         
 
 def main():
+    global drone
+    global thread_lock
+    global thread_lock2
+    global exiting
+    global manual_mode
+    global W
+    global H
     W, H = 320, 240
+    
+    
     drone = libardrone.ARDrone(True)
     drone.reset()
+    
     exiting = False
     manual_mode = True
     
