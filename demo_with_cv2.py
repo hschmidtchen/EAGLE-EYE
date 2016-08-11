@@ -193,7 +193,7 @@ class automaticControlThread (threading.Thread):
 						# To do image recognition and controler calculation
 						if p[0] >= -W/2:
 							miss_counter = 0
-							#self.controlStep(p,d)
+							self.controlStep(p,d)
 							p,d = self.getAndSearchImage()
 						elif miss_counter < 5:
 							miss_counter += 1
@@ -204,31 +204,15 @@ class automaticControlThread (threading.Thread):
 				else:
 					thread_lock2.release()
 					try:
-						# print pygame.image
+						# pull image
 						pixelarray = drone.get_image()
 						if pixelarray != None:
 							frame = pixelarray[:,:,::-1].copy()
 						#resize image
-						#resized=cv2.resize(frame,(W,H))
-							#print 'got image'
-						# aruco detection
-						#gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-						#aruco_dict = aruco.Dictionary_get(aruco.DICT_6X6_250)
-						#parameters =  aruco.DetectorParameters_create()
-				
-						#lists of ids and the corners beloning to each id
-						#corners, ids, rejectedImgPoints = aruco.detectMarkers(gray, aruco_dict, parameters=parameters)
-						#print(corners)
-						#gray = aruco.drawDetectedMarkers(gray, corners)
-
-						# battery status
-						#hud_color = (255, 0, 0) if drone.navdata.get('drone_state', dict()).get('emergency_mask', 1) else (10, 10, 255)
-						#bat = drone.navdata.get(0, dict()).get('battery', 0)
-						# f = pygame.font.Font(None, 20)
-						# hud = f.render('Battery: %i%%' % bat, True, hud_color) 
-						# screen.blit(hud, (10, 10))
+							resized=cv2.resize(frame,(W,H))
+						
 						thread_lock3.acquire()
-						render_frame = frame
+						render_frame = resized
 						new_frame = True
 						thread_lock3.release()
 					except:
@@ -246,17 +230,18 @@ class automaticControlThread (threading.Thread):
 			if pixelarray != None:
 				frame = pixelarray[:,:,::-1].copy()
 			#resize image
-				#resized=cv2.resize(frame,(W,H))
+				resized=cv2.resize(frame,(W,H))
 				print 'got image'
 			# aruco detection
-				gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+				gray = cv2.cvtColor(resized, cv2.COLOR_BGR2GRAY)
 				aruco_dict = aruco.Dictionary_get(aruco.DICT_6X6_250)
 				parameters =  aruco.DetectorParameters_create()
 		
 				#lists of ids and the corners beloning to each id
 				corners, ids, rejectedImgPoints = aruco.detectMarkers(gray, aruco_dict, parameters=parameters)
-				print(corners)
-				gray = aruco.drawDetectedMarkers(gray, corners)
+				#print(corners)
+
+
 
 				# battery status
 				#hud_color = (255, 0, 0) if drone.navdata.get('drone_state', dict()).get('emergency_mask', 1) else (10, 10, 255)
@@ -264,18 +249,49 @@ class automaticControlThread (threading.Thread):
 				# f = pygame.font.Font(None, 20)
 				# hud = f.render('Battery: %i%%' % bat, True, hud_color) 
 				# screen.blit(hud, (10, 10))
-				#cv2.imshow('Drone',gray)	
+				#cv2.imshow('Drone',gray)
+
+				# iterate over all found markers
+				selected_corners = []
+				max_index = (0,0)
+				counter = 0
+				if len(corners) > 0:
+					dim = corners[0].shape
+					#print dim
+					while counter<dim[0]:
+						# A=(1/2)|[(x3-x1)(y4-y2) +(x4-x2)(y1-y3)]|
+						area = 0.5 #*((corners[4*counter+4] - corners[4*counter+0]) * (corners[4*counter+7] - corners[4*counter+3]) + (corners[4*counter+6] - corners[4*counter+2]) * (corners[4*counter+1] - corners[4*counter+5]))
+						if area > max_index[0]:
+							max_index = (area,counter)
+						counter +=1
+
+					#dim2 = (corners[0])[0].shape
+					#print dim2
+					#dim3 = ((corners[0])[0])[0].shape
+					#print dim3
+					max_corners = ((corners[0])[max_index[1]])
+					selected_corners = np.array([np.array([(corners[0])[max_index[1]]],dtype=np.float32)])#[max_index[0]*4:max_index[0]*4+3]
+					#print selected_corners
+					#print selected_corners.shape
+				# draw all markers
+				display = aruco.drawDetectedMarkers(resized, corners)
+
+				# draw selected marker
+				#display = aruco.drawDetectedMarkers(display, selected_corners, Scalar(0, 255, 0) )		
 
 				thread_lock3.acquire()
-				render_frame = gray
+				render_frame = display
 				new_frame = True
 				thread_lock3.release()
 
-				x = 1
-				y = 2
-				hx = 3
-				hy = 4
-				return (x,y), (hx,hy)
+				if len(selected_corners) > 0:
+					x,y = max_corners.sum(axis=0)/4
+					area = max_index[0]
+				else:
+					x = -1
+					y = -1
+					area = -1
+				return (x,y), area
 		except:
 			pass
 		
@@ -369,7 +385,7 @@ def main():
 	global render_frame
 	global new_frame
 	global key
-	W, H = 320, 240
+	W, H = 640, 360
 	key = -1
 	
 	drone = libardrone.ARDrone(True)
