@@ -52,7 +52,7 @@ def manualControlProcess(drone_lock, man_mode_value, key_value, exiting_value):
 		# escape to stop program execution
 		if k == 27: # 27=escape
 			running = False
-			exiting = exiting_value.value
+			exiting_value.value = True
 			drone.reset()
 		 # takeoff
 		elif k == 13: # 13=enter
@@ -70,7 +70,7 @@ def manualControlProcess(drone_lock, man_mode_value, key_value, exiting_value):
 			drone.hover()
 			man_mode_value.value = not man_mode_value.value
  		 # switch between manual and autonomous control
-		elif manual_mode:
+		elif man_mode_value.value:
 			# listen for additional key events for manual control
 			# forward / backward
 			if k == ord('w'):
@@ -138,7 +138,7 @@ def automaticControlProcess(drone_lock, man_mode_value, exiting_value, W, H, fra
 		if exiting_value.value:
 			running = False
 		else:		
-			if not man_mode_value:
+			if not man_mode_value.value:
 				# Tracking 
 				if status == "Start":
 					# To do with image recognition
@@ -346,8 +346,8 @@ def main():
 	
 	while not exiting.value:
 		key.value = cv2.waitKey(33)
-
-		cv2.imshow('Drone',frame_queue.get())			
+		if not frame_queue.empty():
+			cv2.imshow('Drone',frame_queue.get())			
 	# Wait for all processes to complete
 	for t in processes:
 		t.join()
