@@ -244,6 +244,9 @@ class automaticControlThread (threading.Thread):
 		print "Starting " + self.name
 		
 		p[0] = -W		
+<<<<<<< HEAD
+>>>>>>> parent of 96d4869... manual mode runs with threads
+=======
 >>>>>>> parent of 96d4869... manual mode runs with threads
 		
 def automaticControlProcess(drone_lock, man_mode_value, exiting_value, W, H, frame_queue):
@@ -569,6 +572,9 @@ def controlStep(drone_lock,p,d):
 		elif uy > +uy_threshold :
 			drone.speed = MAX_SPEED_ROT * uy
 			drone.turn_down()
+<<<<<<< HEAD
+>>>>>>> parent of 96d4869... manual mode runs with threads
+=======
 >>>>>>> parent of 96d4869... manual mode runs with threads
 		 
 
@@ -588,6 +594,9 @@ def main():
 	global W
 	global H
 	W, H = 320, 240
+<<<<<<< HEAD
+>>>>>>> parent of 96d4869... manual mode runs with threads
+=======
 >>>>>>> parent of 96d4869... manual mode runs with threads
 	
 	
@@ -597,6 +606,7 @@ def main():
 	exiting = Value('b', False)
 	manual_mode = Value('b', True)
 	
+<<<<<<< HEAD
 <<<<<<< HEAD
 	processes = []
 	drone_lock = Lock()
@@ -610,6 +620,8 @@ def main():
 	manual_control_process = Process(target=manualControlProcess, args=(drone_lock, manual_mode,key,exiting))
 	automatic_control_process = Process(target=automaticControlProcess, args=(drone_lock, manual_mode, exiting, W, H, frame_queue))
 =======
+=======
+>>>>>>> parent of 96d4869... manual mode runs with threads
 	threads = []
 	thread_lock = threading.Lock()
 	thread_lock2 = threading.Lock()
@@ -618,6 +630,9 @@ def main():
 	# Create new threads
 	manual_control_thread = manualControlThread(1, "Manual Control Thread", 1)
 	automatic_control_thread = automaticControlThread(2, "Automatic Control Thread", 2)
+<<<<<<< HEAD
+>>>>>>> parent of 96d4869... manual mode runs with threads
+=======
 >>>>>>> parent of 96d4869... manual mode runs with threads
 	
 	# Start new processes
@@ -629,6 +644,7 @@ def main():
 	processes.append(automatic_control_process)
 	
 <<<<<<< HEAD
+<<<<<<< HEAD
 	while not exiting.value:
 		key.value = cv2.waitKey(33)
 		if not frame_queue.empty():
@@ -636,6 +652,8 @@ def main():
 	# Wait for all processes to complete
 	for t in processes:
 =======
+=======
+>>>>>>> parent of 96d4869... manual mode runs with threads
 	# Wait for all threads to complete
 	for t in threads:
 >>>>>>> parent of 96d4869... manual mode runs with threads
