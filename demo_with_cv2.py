@@ -183,18 +183,19 @@ class automaticControlThread (threading.Thread):
 						self.status = "Searching"
 					elif self.status == "Searching":
 						# To do turn and search marker
-						p,d = self.getAndSearchImage()
+						p,area = self.getAndSearchImage()
 						if p[0] >= -W/2:
 							self.status = "Tracking"
 						else:
-							drone.turn_left()
+							print 'turn left'
+							drone.hover()
 						print 'Searching'
 					elif self.status == "Tracking":
 						# To do image recognition and controler calculation
 						if p[0] >= -W/2:
 							miss_counter = 0
-							self.controlStep(p,d)
-							p,d = self.getAndSearchImage()
+							self.controlStep(p,area)
+							p,area = self.getAndSearchImage()
 						elif miss_counter < 5:
 							miss_counter += 1
 						else:
@@ -224,6 +225,8 @@ class automaticControlThread (threading.Thread):
 		global thread_lock3
 		global render_frame
 		global new_frame
+		global W
+		global H
 		try:
 			# print pygame.image
 			pixelarray = drone.get_image()
@@ -231,7 +234,6 @@ class automaticControlThread (threading.Thread):
 				frame = pixelarray[:,:,::-1].copy()
 			#resize image
 				resized=cv2.resize(frame,(W,H))
-				print 'got image'
 			# aruco detection
 				gray = cv2.cvtColor(resized, cv2.COLOR_BGR2GRAY)
 				aruco_dict = aruco.Dictionary_get(aruco.DICT_6X6_250)
@@ -259,8 +261,9 @@ class automaticControlThread (threading.Thread):
 					dim = corners[0].shape
 					#print dim
 					while counter<dim[0]:
+						tmp_corners = ((corners[0])[counter])
 						# A=(1/2)|[(x3-x1)(y4-y2) +(x4-x2)(y1-y3)]|
-						area = 0.5 #*((corners[4*counter+4] - corners[4*counter+0]) * (corners[4*counter+7] - corners[4*counter+3]) + (corners[4*counter+6] - corners[4*counter+2]) * (corners[4*counter+1] - corners[4*counter+5]))
+						area = 0.5*((tmp_corners[2][0] - tmp_corners[0][0]) * (tmp_corners[3][1] - tmp_corners[1][1]) + (tmp_corners[3][0] - tmp_corners[1][0]) * (tmp_corners[0][1] - tmp_corners[2][1]))
 						if area > max_index[0]:
 							max_index = (area,counter)
 						counter +=1
@@ -288,58 +291,71 @@ class automaticControlThread (threading.Thread):
 					x,y = max_corners.sum(axis=0)/4
 					area = max_index[0]
 				else:
-					x = -1
+					x = -W
 					y = -1
 					area = -1
-				return (x,y), area
+				return (x-W/2,y-H/2), area
 		except:
 			pass
 		
-	def controlStep(self,p,d):
+	def controlStep(self,p,area):
 		
+		global tx_prev
+		global uix_prev
+		global ex_prev
+		global uif_prev
+		global ef_prev
 		x = p[0]	  
 		y = p[1]
 		
-		hx = d[0]
-		hy = d[1]
+		move_command = False
 
-		K_px=2.0
-		K_dx=0.0
-		K_ix=1.0		
-		
-		#initialization
-		tx_prev = 0
-		uix_prev = 0
-		ex_prev = 0
+		MAX_SPEED_ROT = 1.0
+		MAX_SPEED_MOVE = 1.0
+
+		# control direction
+
+		K_px=0.5
+		K_dx=1.0
+		K_ix=1.0	
+		ux_threshold = 30		
 			
 		#control x
 		#error for x between the desired and actual output
 		ex = 0 - x
+		if tx_prev == 0:
+			tx_prev = time.time() - 0.008
 		tx = time.time() - tx_prev
 		
 		#Integration input
 		uix = uix_prev + 1/K_ix * tx*ex
 		#Derivation input
-		udx = 1/K_d * (ex-ex_prev)/tx
+		udx = 1/K_dx * (ex-ex_prev)/tx
 		
 		#adjust previous values
 		ex_prev = ex
 		tx_prev += tx
 		uix_prev = uix
-		
+	
 		#calculate input for the system
-		ux = K_p * (ex + uix + udx)
+		ux = K_px * (ex) #+ uix + udx)
 		
 		if ux < -ux_threshold :
-			drone.speed = -MAX_SPEED_ROT * ux
+			drone.speed = -MAX_SPEED_ROT * ux / W * 2
+			print 'turn: '+str(MAX_SPEED_ROT  * ux / W * 2)
 			drone.turn_right()
+			move_command = True
 		elif ux > +ux_threshold :
-			drone.speed = MAX_SPEED_ROT * ux
+			drone.speed = MAX_SPEED_ROT * ux / W * 2
 			drone.turn_left()
+			move_command = True
+			print 'turn: '+str(MAX_SPEED_ROT * ux / W * 2)
 		
+		#control height
 		K_py=2.0
-		K_dy=0.0
-		K_iy=1.0		
+		K_dy=1.0
+		K_iy=1.0	
+		uy_threshold = 50		
 		
 		#initialization
 		ty_prev = 0
@@ -349,8 +365,8 @@ class automaticControlThread (threading.Thread):
 		#control y		
 		#error for y between the desired and actual output
 		ey = 0 - y
-		ty = time.time() - ty_prev
-		
+		ty = tx
+	
 		#Integration input
 		uiy = uiy_prev + 1/K_iy * ty*ey
 		#Derivation input
@@ -366,11 +382,50 @@ class automaticControlThread (threading.Thread):
 		
 		if uy < -uy_threshold :
 			drone.speed = -MAX_SPEED_ROT * uy
-			drone.turn_up()
+			#drone.move_up()
 		elif uy > +uy_threshold :
 			drone.speed = MAX_SPEED_ROT * uy
-			drone.turn_down()
-		 
+			#drone.move_down()
+
+		# control forward
+		K_pf=0.4
+		K_df=1.0
+		K_if=1.0	
+		uf_threshold = 0.02		
+			
+		#control f
+		#error for f between the desired and actual output
+		ef = 0.3 - (area/(W*H)) **0.5
+		tf = tx
+		#Integration input
+		uif = uif_prev + 1/K_if * tf*ef
+		#Derivation input
+		udf = 1/K_df * (ef-ef_prev)/tf
+		
+		#adjust previous values
+		ef_prev = ef
+		uif_prev = uif
+	
+		#calculate input for the system
+		uf = K_pf * (ef) #+ uif + udf)
+		
+		print 'forward: '+str(uf)
+
+		if uf < -uf_threshold :
+			drone.speed = -MAX_SPEED_MOVE * uf 
+			print 'move: '+str(MAX_SPEED_MOVE  * uf)
+			drone.move_backward()
+			move_command = True
+		elif uf > +uf_threshold :
+			drone.speed = MAX_SPEED_MOVE * uf 
+			drone.move_forward()
+			move_command = True
+			print 'move: '+str(MAX_SPEED_MOVE * uf)
+
+		# hover if no command signal
+		if not move_command:
+			drone.hover()
+
 
 def main():
 	global drone
@@ -385,6 +440,12 @@ def main():
 	global render_frame
 	global new_frame
 	global key
+	global tx_prev
+	global uix_prev
+	global ex_prev
+	global uif_prev
+	global ef_prev
+
 	W, H = 640, 360
 	key = -1
 	
@@ -400,6 +461,12 @@ def main():
 	thread_lock3 = threading.Lock()
 	thread_lock4 = threading.Lock()
 
+	#initialization
+	tx_prev = 0
+	uix_prev = 0
+	ex_prev = 0
+	uif_prev = 0
+	ef_prev = 0
 	
 	# Create new threads
 	manual_control_thread = manualControlThread(1, "Manual Control Thread")
