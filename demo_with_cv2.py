@@ -245,6 +245,9 @@ class automaticControlThread (threading.Thread):
 		
 		p[0] = -W		
 <<<<<<< HEAD
+<<<<<<< HEAD
+>>>>>>> parent of 96d4869... manual mode runs with threads
+=======
 >>>>>>> parent of 96d4869... manual mode runs with threads
 =======
 >>>>>>> parent of 96d4869... manual mode runs with threads
@@ -573,6 +576,9 @@ def controlStep(drone_lock,p,d):
 			drone.speed = MAX_SPEED_ROT * uy
 			drone.turn_down()
 <<<<<<< HEAD
+<<<<<<< HEAD
+>>>>>>> parent of 96d4869... manual mode runs with threads
+=======
 >>>>>>> parent of 96d4869... manual mode runs with threads
 =======
 >>>>>>> parent of 96d4869... manual mode runs with threads
@@ -595,6 +601,9 @@ def main():
 	global H
 	W, H = 320, 240
 <<<<<<< HEAD
+<<<<<<< HEAD
+>>>>>>> parent of 96d4869... manual mode runs with threads
+=======
 >>>>>>> parent of 96d4869... manual mode runs with threads
 =======
 >>>>>>> parent of 96d4869... manual mode runs with threads
@@ -606,6 +615,7 @@ def main():
 	exiting = Value('b', False)
 	manual_mode = Value('b', True)
 	
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 	processes = []
@@ -622,6 +632,8 @@ def main():
 =======
 =======
 >>>>>>> parent of 96d4869... manual mode runs with threads
+=======
+>>>>>>> parent of 96d4869... manual mode runs with threads
 	threads = []
 	thread_lock = threading.Lock()
 	thread_lock2 = threading.Lock()
@@ -631,6 +643,9 @@ def main():
 	manual_control_thread = manualControlThread(1, "Manual Control Thread", 1)
 	automatic_control_thread = automaticControlThread(2, "Automatic Control Thread", 2)
 <<<<<<< HEAD
+<<<<<<< HEAD
+>>>>>>> parent of 96d4869... manual mode runs with threads
+=======
 >>>>>>> parent of 96d4869... manual mode runs with threads
 =======
 >>>>>>> parent of 96d4869... manual mode runs with threads
@@ -645,6 +660,7 @@ def main():
 	
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 	while not exiting.value:
 		key.value = cv2.waitKey(33)
 		if not frame_queue.empty():
@@ -652,6 +668,8 @@ def main():
 	# Wait for all processes to complete
 	for t in processes:
 =======
+=======
+>>>>>>> parent of 96d4869... manual mode runs with threads
 =======
 >>>>>>> parent of 96d4869... manual mode runs with threads
 	# Wait for all threads to complete
