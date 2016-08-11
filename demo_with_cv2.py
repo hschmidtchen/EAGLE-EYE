@@ -52,12 +52,16 @@ class manualControlThread (threading.Thread):
 		global manual_mode
 		global thread_lock
 		global thread_lock2
+		global thread_lock4
+		global key
 		
 		print "Starting " + self.name
 		
 		while self.running:
 			# query pressed keys
-			k = cv2.waitKey(33)
+			thread_lock4.acquire()
+			k = key
+			thread_lock4.release()
 			# escape to stop program execution
 			if k == 27: # 27=escape
 				self.running = False
@@ -148,14 +152,18 @@ class automaticControlThread (threading.Thread):
 		global drone
 		global thread_lock
 		global thread_lock2
+		global thread_lock2
 		global exiting
 		global manual_mode
 		global W
 		global H
-		
+		global new_frame
+		global render_frame
 		print "Starting " + self.name
 		
-		p[0] = -W		
+		miss_counter = 0
+
+		p = (-W	,0)	
 		
 		while self.running:
 			thread_lock.acquire()
@@ -167,10 +175,12 @@ class automaticControlThread (threading.Thread):
 				
 				thread_lock2.acquire()
 				if not manual_mode:
+					thread_lock2.release()
+
 					# Tracking 
 					if self.status == "Start":
 						# To do with image recognition
-						print'start'
+						self.status = "Searching"
 					elif self.status == "Searching":
 						# To do turn and search marker
 						p,d = self.getAndSearchImage()
@@ -182,23 +192,61 @@ class automaticControlThread (threading.Thread):
 					elif self.status == "Tracking":
 						# To do image recognition and controler calculation
 						if p[0] >= -W/2:
-							controlStep(p,d)
+							miss_counter = 0
+							#self.controlStep(p,d)
 							p,d = self.getAndSearchImage()
+						elif miss_counter < 5:
+							miss_counter += 1
 						else:
 							self.status = "Searching"
 						print 'tracking'
 					# Controler
+				else:
+					thread_lock2.release()
+					try:
+						# print pygame.image
+						pixelarray = drone.get_image()
+						if pixelarray != None:
+							frame = pixelarray[:,:,::-1].copy()
+						#resize image
+						#resized=cv2.resize(frame,(W,H))
+							#print 'got image'
+						# aruco detection
+						#gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+						#aruco_dict = aruco.Dictionary_get(aruco.DICT_6X6_250)
+						#parameters =  aruco.DetectorParameters_create()
 				
+						#lists of ids and the corners beloning to each id
+						#corners, ids, rejectedImgPoints = aruco.detectMarkers(gray, aruco_dict, parameters=parameters)
+						#print(corners)
+						#gray = aruco.drawDetectedMarkers(gray, corners)
+
+						# battery status
+						#hud_color = (255, 0, 0) if drone.navdata.get('drone_state', dict()).get('emergency_mask', 1) else (10, 10, 255)
+						#bat = drone.navdata.get(0, dict()).get('battery', 0)
+						# f = pygame.font.Font(None, 20)
+						# hud = f.render('Battery: %i%%' % bat, True, hud_color) 
+						# screen.blit(hud, (10, 10))
+						thread_lock3.acquire()
+						render_frame = frame
+						new_frame = True
+						thread_lock3.release()
+					except:
+						pass
 		print "Exiting" + self.name
 		
 	def getAndSearchImage(self):
-		 try:
+		global drone
+		global thread_lock3
+		global render_frame
+		global new_frame
+		try:
 			# print pygame.image
 			pixelarray = drone.get_image()
 			if pixelarray != None:
 				frame = pixelarray[:,:,::-1].copy()
 			#resize image
-				resized=cv2.resize(frame,(W,H))
+				#resized=cv2.resize(frame,(W,H))
 				print 'got image'
 			# aruco detection
 				gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -211,18 +259,24 @@ class automaticControlThread (threading.Thread):
 				gray = aruco.drawDetectedMarkers(gray, corners)
 
 				# battery status
-				hud_color = (255, 0, 0) if drone.navdata.get('drone_state', dict()).get('emergency_mask', 1) else (10, 10, 255)
-				bat = drone.navdata.get(0, dict()).get('battery', 0)
+				#hud_color = (255, 0, 0) if drone.navdata.get('drone_state', dict()).get('emergency_mask', 1) else (10, 10, 255)
+				#bat = drone.navdata.get(0, dict()).get('battery', 0)
 				# f = pygame.font.Font(None, 20)
 				# hud = f.render('Battery: %i%%' % bat, True, hud_color) 
 				# screen.blit(hud, (10, 10))
-				cv2.imshow('Drone',gray)			
+				#cv2.imshow('Drone',gray)	
+
+				thread_lock3.acquire()
+				render_frame = gray
+				new_frame = True
+				thread_lock3.release()
+
 				x = 1
 				y = 2
 				hx = 3
 				hy = 4
 				return (x,y), (hx,hy)
-		 except:
+		except:
 			pass
 		
 	def controlStep(self,p,d):
@@ -306,27 +360,34 @@ def main():
 	global drone
 	global thread_lock
 	global thread_lock2
+	global thread_lock3
+	global thread_lock4
 	global exiting
 	global manual_mode
 	global W
 	global H
+	global render_frame
+	global new_frame
+	global key
 	W, H = 320, 240
-	
+	key = -1
 	
 	drone = libardrone.ARDrone(True)
 	drone.reset()
 	
 	exiting = False
 	manual_mode = True
-	
+	new_frame = False
 	threads = []
 	thread_lock = threading.Lock()
 	thread_lock2 = threading.Lock()
+	thread_lock3 = threading.Lock()
+	thread_lock4 = threading.Lock()
 
 	
 	# Create new threads
-	manual_control_thread = manualControlThread(1, "Manual Control Thread", 1)
-	automatic_control_thread = automaticControlThread(2, "Automatic Control Thread", 2)
+	manual_control_thread = manualControlThread(1, "Manual Control Thread")
+	automatic_control_thread = automaticControlThread(2, "Automatic Control Thread")
 	
 	# Start new Threads
 	manual_control_thread.start()
@@ -335,7 +396,21 @@ def main():
 	# Add threads to thread list
 	threads.append(manual_control_thread)
 	threads.append(automatic_control_thread)
-	
+
+	thread_lock.acquire()
+	while not exiting:		
+		thread_lock.release()
+
+		thread_lock4.acquire()
+		key = cv2.waitKey(33)
+		thread_lock4.release()
+
+		thread_lock3.acquire()
+		if new_frame:
+			cv2.imshow('Drone',render_frame)	
+		thread_lock3.release()
+		thread_lock.acquire()
+
 	# Wait for all threads to complete
 	for t in threads:
 		t.join()
