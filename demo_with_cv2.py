@@ -305,6 +305,8 @@ class automaticControlThread (threading.Thread):
 		global ex_prev
 		global uif_prev
 		global ef_prev
+		global uiy_prev
+		global ey_prev
 		x = p[0]	  
 		y = p[1]
 		
@@ -315,7 +317,7 @@ class automaticControlThread (threading.Thread):
 
 		# control direction
 
-		K_px=0.5
+		K_px=1.0
 		K_dx=1.0
 		K_ix=1.0	
 		ux_threshold = 30		
@@ -340,27 +342,19 @@ class automaticControlThread (threading.Thread):
 		#calculate input for the system
 		ux = K_px * (ex) #+ uix + udx)
 		
-		if ux < -ux_threshold :
-			drone.speed = -MAX_SPEED_ROT * ux / W * 2
-			print 'turn: '+str(MAX_SPEED_ROT  * ux / W * 2)
-			drone.turn_right()
+		if ux < -ux_threshold or ux > ux_threshold:
+			left_right = MAX_SPEED_ROT * ux / W * 2
+			print 'left_right: '+str(MAX_SPEED_ROT  * ux / W * 2)
 			move_command = True
-		elif ux > +ux_threshold :
-			drone.speed = MAX_SPEED_ROT * ux / W * 2
-			drone.turn_left()
-			move_command = True
-			print 'turn: '+str(MAX_SPEED_ROT * ux / W * 2)
 		
 		#control height
-		K_py=2.0
+		K_py=0.5
 		K_dy=1.0
 		K_iy=1.0	
-		uy_threshold = 50		
+		uy_threshold = 0.15		
 		
 		#initialization
-		ty_prev = 0
-		uiy_prev = 0
-		ey_prev = 0		
+		
 		
 		#control y		
 		#error for y between the desired and actual output
@@ -374,28 +368,24 @@ class automaticControlThread (threading.Thread):
 		
 		#adjust previous values
 		ey_prev = ey
-		ty_prev += ty
 		uiy_prev = uiy
 		
 		#calculate input for the system
-		uy = K_py * (ey + uiy + udy)
+		uy = 2.0/H*K_py * (ey) #+ uiy + udy)
+		if uy < -uy_threshold or uy > uy_threshold:
+			up_down = MAX_SPEED_MOVE * uy
+			move_command = True
+			print 'up_down: '+str(MAX_SPEED_MOVE * uy)
 		
-		if uy < -uy_threshold :
-			drone.speed = -MAX_SPEED_ROT * uy
-			#drone.move_up()
-		elif uy > +uy_threshold :
-			drone.speed = MAX_SPEED_ROT * uy
-			#drone.move_down()
-
 		# control forward
 		K_pf=0.4
 		K_df=1.0
 		K_if=1.0	
-		uf_threshold = 0.02		
+		uf_threshold = 0.01	
 			
 		#control f
 		#error for f between the desired and actual output
-		ef = 0.3 - (area/(W*H)) **0.5
+		ef = 0.2 - (area/(W*H)) **0.5
 		tf = tx
 		#Integration input
 		uif = uif_prev + 1/K_if * tf*ef
@@ -409,22 +399,13 @@ class automaticControlThread (threading.Thread):
 		#calculate input for the system
 		uf = K_pf * (ef) #+ uif + udf)
 		
-		print 'forward: '+str(uf)
+		if uf < -uf_threshold or uf > uf_threshold:
+			front_back = MAX_SPEED_MOVE * uf 
+			move_command = True		
+			print 'front_back: '+str(MAX_SPEED_MOVE * uf)
 
-		if uf < -uf_threshold :
-			drone.speed = -MAX_SPEED_MOVE * uf 
-			print 'move: '+str(MAX_SPEED_MOVE  * uf)
-			drone.move_backward()
-			move_command = True
-		elif uf > +uf_threshold :
-			drone.speed = MAX_SPEED_MOVE * uf 
-			drone.move_forward()
-			move_command = True
-			print 'move: '+str(MAX_SPEED_MOVE * uf)
-
-		# hover if no command signal
-		if not move_command:
-			drone.hover()
+		# apply control vectors
+		drone.at(at_pcdm, move_command, 0, front_back, up_down, left_right)
 
 
 def main():
@@ -445,6 +426,8 @@ def main():
 	global ex_prev
 	global uif_prev
 	global ef_prev
+	global uiy_prev
+	global ey_prev
 
 	W, H = 640, 360
 	key = -1
@@ -467,6 +450,8 @@ def main():
 	ex_prev = 0
 	uif_prev = 0
 	ef_prev = 0
+	uiy_prev = 0
+	ey_prev = 0		
 	
 	# Create new threads
 	manual_control_thread = manualControlThread(1, "Manual Control Thread")
