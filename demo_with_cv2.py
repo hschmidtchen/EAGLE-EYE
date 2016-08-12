@@ -307,6 +307,9 @@ class automaticControlThread (threading.Thread):
 		global ef_prev
 		global uiy_prev
 		global ey_prev
+		up_down = 0
+		left_right = 0
+		front_back = 0
 		x = p[0]	  
 		y = p[1]
 		
@@ -405,7 +408,7 @@ class automaticControlThread (threading.Thread):
 			print 'front_back: '+str(MAX_SPEED_MOVE * uf)
 
 		# apply control vectors
-		drone.at(at_pcdm, move_command, 0, front_back, up_down, left_right)
+		drone.at(libardrone.at_pcmd, move_command, 0, -front_back, up_down, -left_right)
 
 
 def main():
