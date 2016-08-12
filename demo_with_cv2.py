@@ -315,15 +315,15 @@ class automaticControlThread (threading.Thread):
 		
 		move_command = False
 
-		MAX_SPEED_ROT = 1.0
-		MAX_SPEED_MOVE = 1.0
+		MAX_SPEED_ROT = 1.5
+		MAX_SPEED_MOVE = 2.0
 
 		# control direction
 
 		K_px=1.0
 		K_dx=1.0
 		K_ix=1.0	
-		ux_threshold = 30		
+		ux_threshold = 15		
 			
 		#control x
 		#error for x between the desired and actual output
@@ -354,7 +354,7 @@ class automaticControlThread (threading.Thread):
 		K_py=0.5
 		K_dy=1.0
 		K_iy=1.0	
-		uy_threshold = 0.15		
+		uy_threshold = 0.1		
 		
 		#initialization
 		
@@ -384,7 +384,7 @@ class automaticControlThread (threading.Thread):
 		K_pf=0.4
 		K_df=1.0
 		K_if=1.0	
-		uf_threshold = 0.01	
+		uf_threshold = 0.005
 			
 		#control f
 		#error for f between the desired and actual output
