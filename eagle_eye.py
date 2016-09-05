@@ -1,30 +1,9 @@
 #!/usr/bin/env python
 
-# Copyright (c) 2011 Bastian Venthur
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in
-# all copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-# THE SOFTWARE.
+"""Eagle_Eye app for the AR.Drone.
 
-
-"""Demo app for the AR.Drone.
-
-This simple application allows to control the drone and see the drone's video
-stream.
+This application allows to control the AR.Drone via a PC keyboard while seeing the camera stream.
+It also features an autonomous mode in which the drone follows an "aruco"-marker without active control by a pilot.
 """
 
 
@@ -38,6 +17,8 @@ import time
 
 exitFlag = 0
 
+# thread to control the drone while in manual control mode. Basic control stays active in
+# autonomous mode to still allow interception if required
 class manualControlThread (threading.Thread):
 	def __init__(self, threadID, name):
 		threading.Thread.__init__(self)
@@ -51,17 +32,17 @@ class manualControlThread (threading.Thread):
 		global exiting
 		global manual_mode
 		global thread_lock
-		global thread_lock2
-		global thread_lock4
+		global thread_lock_manual_mode
+		global thread_lock_key
 		global key
 		
 		print "Starting " + self.name
 		
 		while self.running:
 			# query pressed keys
-			thread_lock4.acquire()
+			thread_lock_key.acquire()
 			k = key
-			thread_lock4.release()
+			thread_lock_key.release()
 			# escape to stop program execution
 			if k == 27: # 27=escape
 				self.running = False
@@ -83,9 +64,9 @@ class manualControlThread (threading.Thread):
 			# switch control mode
 			elif k == ord('m'):
 				drone.hover()
-				thread_lock2.acquire()
+				thread_lock_manual_mode.acquire()
 				manual_mode = not manual_mode
-				thread_lock2.release()
+				thread_lock_manual_mode.release()
 	 		 # switch between manual and autonomous control
 			elif manual_mode:
 				# listen for additional key events for manual control
@@ -130,6 +111,7 @@ class manualControlThread (threading.Thread):
 				  drone.speed = 0.9
 				elif k == ord('0'):
 				  drone.speed = 1.0
+				# if no matching input: hover
 				else:
 				  drone.hover()
 			  
@@ -137,7 +119,8 @@ class manualControlThread (threading.Thread):
 		drone.halt()
 		print("Ok.")		
 		print "Exiting " + self.name
-		
+
+# thread that performs the automatic control of the drone while not in manual mode
 class automaticControlThread (threading.Thread):
 	def __init__(self, threadID, name):
 		threading.Thread.__init__(self)
@@ -151,8 +134,8 @@ class automaticControlThread (threading.Thread):
 		
 		global drone
 		global thread_lock
-		global thread_lock2
-		global thread_lock2
+		global thread_lock_manual_mode
+		global thread_lock_camera_frame
 		global exiting
 		global manual_mode
 		global W
@@ -161,10 +144,11 @@ class automaticControlThread (threading.Thread):
 		global render_frame
 		print "Starting " + self.name
 		
+		# initializations for startup
 		miss_counter = 0
-
 		p = (-W	,0)	
 		
+		# loop while flight active
 		while self.running:
 			thread_lock.acquire()
 			if exiting:
@@ -173,9 +157,10 @@ class automaticControlThread (threading.Thread):
 			else:
 				thread_lock.release()
 				
-				thread_lock2.acquire()
+				thread_lock_manual_mode.acquire()
+				# check if in autonomous mode
 				if not manual_mode:
-					thread_lock2.release()
+					thread_lock_manual_mode.release()
 
 					# Tracking 
 					if self.status == "Start":
@@ -187,23 +172,24 @@ class automaticControlThread (threading.Thread):
 						if p[0] >= -W/2:
 							self.status = "Tracking"
 						else:
-							print 'turn left'
 							drone.hover()
 						print 'Searching'
 					elif self.status == "Tracking":
-						# To do image recognition and controler calculation
+						# While in tracking mode, allow 4 misses(frames without marker detection) before going back to hovering
 						if p[0] >= -W/2:
 							miss_counter = 0
+							# call controller
 							self.controlStep(p,area)
+							# get next frame from camera stream, track marker and display it
 							p,area = self.getAndSearchImage()
 						elif miss_counter < 5:
 							miss_counter += 1
 						else:
 							self.status = "Searching"
 						print 'tracking'
-					# Controler
+				# if not in autonomous mode: deliver frames from camarea stream without marker tracking (colored)
 				else:
-					thread_lock2.release()
+					thread_lock_manual_mode.release()
 					try:
 						# pull image
 						pixelarray = drone.get_image()
@@ -212,17 +198,18 @@ class automaticControlThread (threading.Thread):
 						#resize image
 							resized=cv2.resize(frame,(W,H))
 						
-						thread_lock3.acquire()
+						thread_lock_camera_frame.acquire()
 						render_frame = resized
 						new_frame = True
-						thread_lock3.release()
+						thread_lock_camera_frame.release()
 					except:
 						pass
 		print "Exiting" + self.name
 		
+	# function used by the automomous control thread retrieve an image from the camera stream and perform the tracking
 	def getAndSearchImage(self):
 		global drone
-		global thread_lock3
+		global thread_lock_camera_frame
 		global render_frame
 		global new_frame
 		global W
@@ -232,28 +219,17 @@ class automaticControlThread (threading.Thread):
 			pixelarray = drone.get_image()
 			if pixelarray != None:
 				frame = pixelarray[:,:,::-1].copy()
-			#resize image
+				#resize image
 				resized=cv2.resize(frame,(W,H))
-			# aruco detection
+				# aruco detection
 				gray = cv2.cvtColor(resized, cv2.COLOR_BGR2GRAY)
 				aruco_dict = aruco.Dictionary_get(aruco.DICT_6X6_250)
 				parameters =  aruco.DetectorParameters_create()
 		
 				#lists of ids and the corners beloning to each id
 				corners, ids, rejectedImgPoints = aruco.detectMarkers(gray, aruco_dict, parameters=parameters)
-				#print(corners)
-
-
-
-				# battery status
-				#hud_color = (255, 0, 0) if drone.navdata.get('drone_state', dict()).get('emergency_mask', 1) else (10, 10, 255)
-				#bat = drone.navdata.get(0, dict()).get('battery', 0)
-				# f = pygame.font.Font(None, 20)
-				# hud = f.render('Battery: %i%%' % bat, True, hud_color) 
-				# screen.blit(hud, (10, 10))
-				#cv2.imshow('Drone',gray)
-
-				# iterate over all found markers
+				
+				# iterate over all found markers to determine the one to follow (biggest one)
 				selected_corners = []
 				max_index = (0,0)
 				counter = 0
@@ -268,25 +244,18 @@ class automaticControlThread (threading.Thread):
 							max_index = (area,counter)
 						counter +=1
 
-					#dim2 = (corners[0])[0].shape
-					#print dim2
-					#dim3 = ((corners[0])[0])[0].shape
-					#print dim3
 					max_corners = ((corners[0])[max_index[1]])
 					selected_corners = np.array([np.array([(corners[0])[max_index[1]]],dtype=np.float32)])#[max_index[0]*4:max_index[0]*4+3]
-					#print selected_corners
-					#print selected_corners.shape
+					
 				# draw all markers
 				display = aruco.drawDetectedMarkers(resized, corners)
 
-				# draw selected marker
-				#display = aruco.drawDetectedMarkers(display, selected_corners, Scalar(0, 255, 0) )		
-
-				thread_lock3.acquire()
+				thread_lock_camera_frame.acquire()
 				render_frame = display
 				new_frame = True
-				thread_lock3.release()
+				thread_lock_camera_frame.release()
 
+				# prepare function output
 				if len(selected_corners) > 0:
 					x,y = max_corners.sum(axis=0)/4
 					area = max_index[0]
@@ -298,6 +267,8 @@ class automaticControlThread (threading.Thread):
 		except:
 			pass
 		
+	# function to perform a single control step in the autonomous control thread
+	# TODO: vectorize calculation to avoid redundancy, determine I&D controller values(currently commented out)
 	def controlStep(self,p,area):
 		
 		global tx_prev
@@ -355,10 +326,7 @@ class automaticControlThread (threading.Thread):
 		K_dy=1.0
 		K_iy=1.0	
 		uy_threshold = 0.1		
-		
-		#initialization
-		
-		
+				
 		#control y		
 		#error for y between the desired and actual output
 		ey = 0 - y
@@ -414,9 +382,9 @@ class automaticControlThread (threading.Thread):
 def main():
 	global drone
 	global thread_lock
-	global thread_lock2
-	global thread_lock3
-	global thread_lock4
+	global thread_lock_manual_mode
+	global thread_lock_camera_frame
+	global thread_lock_key
 	global exiting
 	global manual_mode
 	global W
@@ -432,6 +400,7 @@ def main():
 	global uiy_prev
 	global ey_prev
 
+	#initialization
 	W, H = 640, 360
 	key = -1
 	
@@ -443,11 +412,10 @@ def main():
 	new_frame = False
 	threads = []
 	thread_lock = threading.Lock()
-	thread_lock2 = threading.Lock()
-	thread_lock3 = threading.Lock()
-	thread_lock4 = threading.Lock()
+	thread_lock_manual_mode = threading.Lock()
+	thread_lock_camera_frame = threading.Lock()
+	thread_lock_key = threading.Lock()
 
-	#initialization
 	tx_prev = 0
 	uix_prev = 0
 	ex_prev = 0
@@ -472,14 +440,16 @@ def main():
 	while not exiting:		
 		thread_lock.release()
 
-		thread_lock4.acquire()
+		# wait for pressed key
+		thread_lock_key.acquire()
 		key = cv2.waitKey(33)
-		thread_lock4.release()
+		thread_lock_key.release()
 
-		thread_lock3.acquire()
+		# display new frame from camera
+		thread_lock_camera_frame.acquire()
 		if new_frame:
 			cv2.imshow('Drone',render_frame)	
-		thread_lock3.release()
+		thread_lock_camera_frame.release()
 		thread_lock.acquire()
 
 	# Wait for all threads to complete
