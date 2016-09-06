@@ -1,6 +1,6 @@
-# EAGLE EYE
+# EAGLE-EYE
 
-EAGLE EYE was developed during the [CDTM Deep Learning Drones Elective](https://github.com/PatrickChrist/CDTM-Deep-Learning-Drones) and allows to control the AR.Drone 2. The drone can be remote controlled using the camera stream and the keyboard of the PC or switched into autonomous flight mode where it follows a 6x6 [ArUco](http://www.uco.es/investiga/grupos/ava/node/26) marker.
+EAGLE-EYE was developed during the [CDTM Deep Learning Drones Elective](https://github.com/PatrickChrist/CDTM-Deep-Learning-Drones) and allows to control the AR.Drone 2. The drone can be remote controlled using the camera stream and the keyboard of the PC or switched into autonomous flight mode where it follows a 6x6 [ArUco](http://www.uco.es/investiga/grupos/ava/node/26) marker.
 
 This project combines the features of a low level control library [libardrone](https://github.com/mjdev/python-ardrone) with the marker tracking functionalities of [OpenCV 3.1](http://opencv.org/opencv-3-1.html) and a software [PID controller](https://en.wikipedia.org/wiki/PID_controller) to achieve autonomous behavior.
 This drone control mainly uses the libraries OpenCV and [libardrone](https://github.com/venthur/python-ardrone).
@@ -12,10 +12,10 @@ Suggested improvements:
 * add left/right movement without turning
 * optimize the controller values of the PID controller
 
-## Setup and Run EAGLE EYE:
+## Setup and Run EAGLE-EYE:
 The code was developed for the AR.Drone 2 using Python 2.7 and OpenCV 3.1.0.
-The GitHub project [libardrone](https://github.com/mjdev/python-ardrone) provides a set of low level control functions that are used to control the drone. This library must be installed before being able to execute EAGLE EYE.
-If the libardrone library is contained in your python environment, the EAGLE EYE repository can be cloned into a new directory and started by executing eagle_eye.py.
+The GitHub project [libardrone](https://github.com/mjdev/python-ardrone) provides a set of low level control functions that are used to control the drone. This library must be installed before being able to execute EAGLE-EYE.
+If the libardrone library is contained in your python environment, the EAGLE-EYE repository can be cloned into a new directory and started by executing eagle_eye.py.
 Make sure that you are connected to the drone's WiFi!
 
 Press the return key to take off and control the drone using the following keys:
