@@ -19,16 +19,16 @@ If the libardrone library is contained in your python environment, the EAGLE EYE
 Make sure that you are connected to the drone's WiFi!
 
 Press the return key to take off and control the drone using the following keys:
-	UP - fly higher
-	DOWN -fly lower
-	LEFT - turn left
-	RIGHT - turn right
-	W - move forward
-	S - move backwards
-	A - move to the left
-	D - move to the right
-	M - toggle between manual and autonomous control
-	SPACE - landing and shutdown
+* UP - fly higher
+* DOWN -fly lower
+* LEFT - turn left
+* RIGHT - turn right
+* W - move forward
+* S - move backwards
+* A - move to the left
+* D - move to the right
+* M - toggle between manual and autonomous control
+* SPACE - landing and shutdown
 
 Note: Depending on your setup you might have to adjust the keycodes for the arrow keys since those might be different to the ones used on our machines.
 
